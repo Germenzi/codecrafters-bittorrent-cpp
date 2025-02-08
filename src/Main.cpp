@@ -5,30 +5,14 @@
 #include <cstdlib>
 
 #include "lib/nlohmann/json.hpp"
+#include "bencode_parser.hpp"
 
 using json = nlohmann::json;
 
+
 json decode_bencoded_value(const std::string& encoded_value) {
-    if (std::isdigit(encoded_value[0])) {
-        // Example: "5:hello" -> "hello"
-        std::size_t colon_index = encoded_value.find(':');
-        if (colon_index != std::string::npos) {
-            std::string number_string = encoded_value.substr(0, colon_index);
-            int64_t number = std::atoll(number_string.c_str());
-            std::string str = encoded_value.substr(colon_index + 1, number);
-            return json(str);
-        } else {
-            throw std::runtime_error("Invalid encoded value: " + encoded_value);
-        }
-    } else if (encoded_value[0] == 'i') { // decoding integer
-        std::string &&integer_str {encoded_value.substr(1, encoded_value.size()-2)};
-        long long number = std::stoll(integer_str);
-        return json(number);
-    }
-    
-    else {
-        throw std::runtime_error("Unhandled encoded value: " + encoded_value);
-    }
+    bit_torrent::bencode_parser parser {};
+    return parser.parse(encoded_value);
 }
 
 int main(int argc, char* argv[]) {
