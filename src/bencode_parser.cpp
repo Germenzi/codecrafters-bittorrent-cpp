@@ -41,8 +41,8 @@ json bit_torrent::bencode_parser::parse_advance_integer() {
 json bit_torrent::bencode_parser::parse_advance_list() {
     assert(remains_.front() == 'l');
 
-    json result = json::array();
     remains_.remove_prefix(1); // removing 'l'
+    json result = json::array();
     while (!remains_.empty() && remains_.front() != 'e') 
         result.push_back(parse_advance_detected());
     
@@ -54,17 +54,60 @@ json bit_torrent::bencode_parser::parse_advance_list() {
 }   
 
 
-json bit_torrent::bencode_parser::parse_advance_detected() {
-    std::string_view::value_type current = remains_.front();
+json bit_torrent::bencode_parser::parse_advance_dictionary() {
+    assert(remains_.front() == 'd');
 
-    if (std::isdigit(current))
+    remains_.remove_prefix(1); // removing 'l'
+    json result = json::object();
+    while (!remains_.empty() && remains_.front() != 'e') {
+        if (detect_current_type() != bencode_types::TYPE_STRING)
+            throw std::runtime_error {"parse_dictionary: string as a key expected: " + std::string{remains_}};
+        
+        json key = parse_advance_string();
+        json value = parse_advance_detected();
+
+        result[key] = value;
+    }
+
+    if (remains_.empty())
+        throw std::runtime_error {"parse_list: list ending 'e' wasn't found"};
+    
+    remains_.remove_prefix(1); // removing 'e'
+    return result;
+}
+
+
+json bit_torrent::bencode_parser::parse_advance_detected() {
+    switch (detect_current_type()) {
+    case bencode_types::TYPE_STRING:
         return parse_advance_string();
     
-    if (current == 'i')
+    case bencode_types::TYPE_INT:
         return parse_advance_integer();
-    
-    if (current == 'l')
+
+    case bencode_types::TYPE_LIST:
         return parse_advance_list();
 
+    case bencode_types::TYPE_DICT:
+        return parse_advance_dictionary();
+    };
+
     throw std::runtime_error {"parse_detected: invalid string format: " + std::string{remains_}};
+}
+
+
+bit_torrent::bencode_parser::bencode_types bit_torrent::bencode_parser::detect_current_type() const {
+    if (std::isdigit(remains_.front()))
+        return bit_torrent::bencode_parser::bencode_types::TYPE_STRING;
+    
+    if (remains_.front() == 'i')
+        return bit_torrent::bencode_parser::bencode_types::TYPE_INT;
+    
+    if (remains_.front() == 'l')
+        return bit_torrent::bencode_parser::bencode_types::TYPE_LIST;
+    
+    if (remains_.front() == 'd')
+        return bit_torrent::bencode_parser::bencode_types::TYPE_DICT;
+    
+    return bit_torrent::bencode_parser::bencode_types::TYPE_NONE;
 }
