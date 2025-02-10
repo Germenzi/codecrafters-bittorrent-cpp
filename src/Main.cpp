@@ -3,6 +3,8 @@
 #include <vector>
 #include <cctype>
 #include <cstdlib>
+#include <fstream>
+#include <sstream>
 
 #include "lib/nlohmann/json.hpp"
 #include "bencode_parser.hpp"
@@ -39,6 +41,26 @@ int main(int argc, char* argv[]) {
         std::string encoded_value = argv[2];
         json decoded_value = decode_bencoded_value(encoded_value);
         std::cout << decoded_value.dump() << std::endl;
+    } else if (command == "info") {
+        if (argc < 3) {
+            std::cerr << "Usage: " << argv[0] << " decode <encoded_value>" << std::endl;
+            return 1;
+        }
+
+        std::ifstream fin {argv[2]};
+        if (!fin.is_open()) {
+            std::cerr << "unable to open " << argv[2] << std::endl;
+            return 1;
+        }
+
+        std::stringstream file_content;
+        file_content << fin.rdbuf();
+        fin.close();
+
+        json torrent_info = decode_bencoded_value(file_content.str());
+
+        std::cout << "Tracker URL: " << std::string (torrent_info["announce"]) << '\n';
+        std::cout << "Length: " << torrent_info["info"]["length"] << '\n';
     } else {
         std::cerr << "unknown command: " << command << std::endl;
         return 1;

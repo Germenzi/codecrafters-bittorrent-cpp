@@ -57,7 +57,7 @@ json bit_torrent::bencode_parser::parse_advance_list() {
 json bit_torrent::bencode_parser::parse_advance_dictionary() {
     assert(remains_.front() == 'd');
 
-    remains_.remove_prefix(1); // removing 'l'
+    remains_.remove_prefix(1); // removing 'd'
     json result = json::object();
     while (!remains_.empty() && remains_.front() != 'e') {
         if (detect_current_type() != bencode_types::TYPE_STRING)
@@ -70,7 +70,7 @@ json bit_torrent::bencode_parser::parse_advance_dictionary() {
     }
 
     if (remains_.empty())
-        throw std::runtime_error {"parse_list: list ending 'e' wasn't found"};
+        throw std::runtime_error {"parse_dictionary: dictionary ending 'e' wasn't found"};
     
     remains_.remove_prefix(1); // removing 'e'
     return result;
@@ -97,6 +97,9 @@ json bit_torrent::bencode_parser::parse_advance_detected() {
 
 
 bit_torrent::bencode_parser::bencode_types bit_torrent::bencode_parser::detect_current_type() const {
+    if (remains_.empty())
+        return bit_torrent::bencode_parser::bencode_types::TYPE_NONE;
+
     if (std::isdigit(remains_.front()))
         return bit_torrent::bencode_parser::bencode_types::TYPE_STRING;
     
