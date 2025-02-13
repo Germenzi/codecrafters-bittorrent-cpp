@@ -8,6 +8,8 @@
 
 #include "lib/nlohmann/json.hpp"
 #include "bencode_parser.hpp"
+#include "bencoder.hpp"
+#include "sha1.hpp"
 
 using json = nlohmann::json;
 
@@ -16,6 +18,7 @@ json decode_bencoded_value(const std::string& encoded_value) {
     bit_torrent::bencode_parser parser {};
     return parser.parse(encoded_value);
 }
+
 
 int main(int argc, char* argv[]) {
     // Flush after every std::cout / std::cerr
@@ -59,8 +62,12 @@ int main(int argc, char* argv[]) {
 
         json torrent_info = decode_bencoded_value(file_content.str());
 
+        SHA1 hasher {};
+        hasher.update(bit_torrent::bencode_json(torrent_info["info"]));
+
         std::cout << "Tracker URL: " << std::string (torrent_info["announce"]) << '\n';
         std::cout << "Length: " << torrent_info["info"]["length"] << '\n';
+        std::cout << "Info Hash: " << hasher.final() << '\n';
     } else {
         std::cerr << "unknown command: " << command << std::endl;
         return 1;
