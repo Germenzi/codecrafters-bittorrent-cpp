@@ -13,10 +13,26 @@
 
 using json = nlohmann::json;
 
+static const std::size_t SHA1_DIGEST_SIZE = 20;
 
 json decode_bencoded_value(const std::string& encoded_value) {
     bit_torrent::bencode_parser parser {};
     return parser.parse(encoded_value);
+}
+
+
+std::vector<std::string> extract_piece_hashes(const std::string &hash) {
+    std::vector<std::string> result (hash.size() / (SHA1_DIGEST_SIZE*2));
+    for (std::size_t offset = 0; offset < hash.size(); offset += SHA1_DIGEST_SIZE*2) {
+        std::ostringstream hash_string;
+        for (char ch : hash.substr(offset, SHA1_DIGEST_SIZE*2)) {
+            hash_string << std::hex << std::setfill('0') << std::setw(2);
+            hash_string << (+ch & 0xFF);
+        }
+        result.push_back(hash_string.str());
+    }
+
+    return result;
 }
 
 
@@ -68,6 +84,10 @@ int main(int argc, char* argv[]) {
         std::cout << "Tracker URL: " << std::string (torrent_info["announce"]) << '\n';
         std::cout << "Length: " << torrent_info["info"]["length"] << '\n';
         std::cout << "Info Hash: " << hasher.final() << '\n';
+        std::cout << "Piece Length: " << torrent_info["info"]["piece length"] << '\n';
+        std::cout << "Piece Hashes:\n";
+        for (const std::string &i : extract_piece_hashes(torrent_info["info"]["pieces"]))
+            std::cout << i << '\n';
     } else {
         std::cerr << "unknown command: " << command << std::endl;
         return 1;
