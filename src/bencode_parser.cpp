@@ -16,9 +16,13 @@ json bit_torrent::bencode_parser::parse_advance_string() {
         throw std::runtime_error {"parse_string: invalid string format at: " + std::string{remains_}};
     
     int64_t charcount = std::stoll(std::string{remains_.substr(0, colon_idx)});
+    
+    if (remains_.size() < charcount+colon_idx+1)
+        throw std::runtime_error("parse_string: not enough chars in string");
+
     std::string result_string = std::string {remains_.substr(colon_idx+1, charcount)};
 
-    remains_.remove_prefix(colon_idx+1+charcount);
+    remains_.remove_prefix(std::min(colon_idx+1+charcount, remains_.size()));
 
     return json(result_string);
 }
